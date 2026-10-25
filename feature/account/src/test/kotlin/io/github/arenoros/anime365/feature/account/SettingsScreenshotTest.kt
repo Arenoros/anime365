@@ -22,6 +22,9 @@ class SettingsScreenshotTest {
     fun defaults() = settings("settings", AppSettings())
 
     @Test
+    fun adultEnabled() = settings("settings_adult", AppSettings(adultContent = true))
+
+    @Test
     fun changedLargeFont() =
         settings("settings_font200", AppSettings(newEpisodeNotifications = false, wifiHeight = 2160), 2f)
 

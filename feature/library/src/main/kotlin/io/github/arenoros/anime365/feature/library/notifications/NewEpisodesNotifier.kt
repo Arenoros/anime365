@@ -18,6 +18,7 @@ import io.github.arenoros.anime365.feature.library.R
 import javax.inject.Inject
 
 private const val CHANNEL_ID = "new_episodes"
+internal const val ADULT_NOTIFICATION_TAG = "adult_new_episodes"
 private const val EXTRA_SERIES_ID = "io.github.arenoros.anime365.extra.SERIES_ID"
 private const val EXTRA_EPISODE_ID = "io.github.arenoros.anime365.extra.EPISODE_ID"
 
@@ -87,6 +88,6 @@ internal class NewEpisodesNotifier
                         ),
                     ).setAutoCancel(true)
                     .build()
-            manager.notify(series.id, notification)
+            manager.notify(if (series.isHentai) ADULT_NOTIFICATION_TAG else null, series.id, notification)
         }
     }

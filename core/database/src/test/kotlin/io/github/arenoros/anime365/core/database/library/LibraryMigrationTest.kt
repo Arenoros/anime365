@@ -23,6 +23,39 @@ class LibraryMigrationTest {
     private val context: Context = ApplicationProvider.getApplicationContext()
 
     @Test
+    fun version2ListAndProgressSurviveAdultFlagMigration() {
+        createVersion1(version = 2).use { db ->
+            db.execSQL(
+                """
+                INSERT INTO library_series (seriesId, title, translationType, team, lastEpisodeId,
+                    lastTranslationId, lastWatchedAt, status, statusChangedAt, episodeCount, seenUploadedAt)
+                VALUES (7, 'Example', 'voiceRu', 'Team', 101, 1, 1000, 'watching', 2000, 12, 3000)
+            """,
+            )
+            db.execSQL("INSERT INTO episode_progress VALUES (101, 7, 'Episode 1', 500, 1000, 0, 1000)")
+            db.execSQL("INSERT INTO new_episode VALUES (102, 7, 'Episode 2', 4000)")
+        }
+        val database = Room.databaseBuilder(context, LibraryDatabase::class.java, NAME).allowMainThreadQueries().build()
+        runBlocking {
+            val row = database.libraryDao().allSeries().single()
+            assertEquals("watching", row.status)
+            assertEquals("Team", row.team)
+            assertEquals(3000L, row.seenUploadedAt)
+            assertEquals(false, row.isHentai)
+            assertEquals(
+                500L,
+                database
+                    .libraryDao()
+                    .allProgress()
+                    .single()
+                    .positionMs,
+            )
+            assertEquals(listOf(102), database.libraryDao().newEpisodeIds(7))
+        }
+        database.close()
+    }
+
+    @Test
     fun version1RowsSurviveAndAreNotInList() {
         createVersion1().use { db ->
             db.execSQL(
@@ -47,9 +80,11 @@ class LibraryMigrationTest {
         database.close()
     }
 
-    private fun createVersion1(): SQLiteDatabase {
+    private fun createVersion1(version: Int = 1): SQLiteDatabase {
         val schema =
-            JSONObject(File("schemas/${LibraryDatabase::class.java.name}/1.json").readText()).getJSONObject("database")
+            JSONObject(
+                File("schemas/${LibraryDatabase::class.java.name}/$version.json").readText(),
+            ).getJSONObject("database")
         val db = SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(NAME).apply { parentFile?.mkdirs() }, null)
         val entities = schema.getJSONArray("entities")
         for (i in 0 until entities.length()) {
@@ -63,7 +98,7 @@ class LibraryMigrationTest {
         }
         val setup = schema.getJSONArray("setupQueries")
         for (i in 0 until setup.length()) db.execSQL(setup.getString(i))
-        db.version = 1
+        db.version = version
         return db
     }
 

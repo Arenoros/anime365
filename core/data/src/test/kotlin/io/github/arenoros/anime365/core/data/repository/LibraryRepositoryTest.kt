@@ -44,6 +44,25 @@ class LibraryRepositoryTest {
     }
 
     @Test
+    fun adultNewEpisodeCountIsHiddenButProgressAndNewMarkersRemain() =
+        runTest {
+            val settings = FakeSettingsStore()
+            val library = LocalLibraryRepository(database.libraryDao(), settings, clock)
+            val adult = frieren(first).copy(summary = series.copy(isHentai = true))
+            library.setStatus(adult, LibraryStatus.Watching)
+            library.recordNewEpisodes(adult.copy(details = adult.details!!.copy(episodes = listOf(first, second))))
+            assertEquals(0, library.newEpisodeCount().first())
+            assertEquals(setOf(102), library.newEpisodeIds(series.id))
+            settings.updateSettings { it.copy(adultContent = true) }
+            assertEquals(1, library.newEpisodeCount().first())
+            library.save(Playback(adult.summary, first, anilibria, 300, 1000))
+            assertEquals(emptyList<Any>(), library.continueWatching().first())
+            settings.updateSettings { it.copy(adultContent = false) }
+            assertEquals(emptyList<Any>(), library.entries().first())
+            assertEquals(300L, library.progressOf(first.id)!!.positionMs)
+        }
+
+    @Test
     fun episodeIsWatchedFromEightyFivePercentAndStaysWatched() =
         runTest {
             repository.save(Playback(series, first, anilibria, positionMs = 849, durationMs = 1000))

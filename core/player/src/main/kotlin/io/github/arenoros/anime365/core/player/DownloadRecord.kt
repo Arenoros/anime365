@@ -31,6 +31,7 @@ internal data class DownloadRecord(
     val translationHeight: Int,
     val height: Int,
     val subtitlesUrl: String? = null,
+    val isHentai: Boolean = false,
 ) {
     fun encode(): ByteArray = recordJson.encodeToString(serializer(), this).encodeToByteArray()
 
@@ -60,6 +61,7 @@ internal data class DownloadRecord(
             state = state,
             bytesDownloaded = bytesDownloaded,
             contentLength = contentLength,
+            isHentai = isHentai,
         )
 
     companion object {
@@ -72,6 +74,7 @@ internal data class DownloadRecord(
         ): DownloadRecord =
             DownloadRecord(
                 seriesId = series.id,
+                isHentai = series.isHentai,
                 seriesTitle = series.title,
                 posterUrl = series.posterUrl,
                 episodeId = episode.id,

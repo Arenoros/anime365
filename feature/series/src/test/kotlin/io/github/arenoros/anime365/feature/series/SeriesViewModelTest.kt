@@ -23,6 +23,29 @@ import org.junit.Rule
 import org.junit.Test
 
 class SeriesViewModelTest {
+    private val settings =
+        io.github.arenoros.anime365.core.testing
+            .FakeSettingsStore()
+
+    @Test
+    fun disabledAdultContentNeverExposesCachedDetails() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val regular = Series(summary(7), details = null)
+            repository.series.value = regular.copy(summary = regular.summary.copy(isHentai = true))
+            val viewModel = SeriesViewModel(7, repository, library, settings)
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            assertEquals(true, viewModel.uiState.value.blocked)
+            assertEquals(null, viewModel.uiState.value.series)
+            settings.updateSettings { it.copy(adultContent = true) }
+            assertEquals(false, viewModel.uiState.value.blocked)
+            assertEquals(
+                true,
+                viewModel.uiState.value.series
+                    ?.summary
+                    ?.isHentai,
+            )
+        }
+
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
@@ -30,10 +53,24 @@ class SeriesViewModelTest {
     private val library = FakeLibraryRepository()
 
     @Test
+    fun blockedSeriesDoesNotClearNewEpisodeMarkers() =
+        runTest(mainDispatcherRule.dispatcher) {
+            repository.series.value =
+                Series(
+                    summary(7).copy(isHentai = true),
+                    SeriesDetails("tv", null, null, emptyList(), emptyList(), emptyList(), emptyList()),
+                )
+            library.newEpisodeIds = setOf(101)
+            SeriesViewModel(7, repository, library, settings)
+            assertTrue(library.seen.isEmpty())
+            assertEquals(setOf(101), library.newEpisodeIds)
+        }
+
+    @Test
     fun cachedSummaryIsShownWhileDetailsLoad() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.series.value = Series(summary(7), details = null)
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             val state = viewModel.uiState.value
@@ -47,7 +84,7 @@ class SeriesViewModelTest {
     fun unavailableSeriesIsReported() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.result = Result.failure(SeriesUnavailableException(7))
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             assertTrue(viewModel.uiState.value.error is SeriesUnavailableException)
@@ -56,7 +93,7 @@ class SeriesViewModelTest {
     @Test
     fun retryForcesRefresh() =
         runTest(mainDispatcherRule.dispatcher) {
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
 
             viewModel.refresh()
 
@@ -69,7 +106,7 @@ class SeriesViewModelTest {
             val series = Series(summary(7), details)
             repository.series.value = series
             library.newEpisodeIds = setOf(second.id)
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             assertEquals(listOf(series), library.seen)
@@ -81,7 +118,7 @@ class SeriesViewModelTest {
         runTest(mainDispatcherRule.dispatcher) {
             val series = Series(summary(7), details)
             repository.series.value = series
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             // Проверка Новых Эпизодов обновила аниме, пока его страница лежит в стеке.
@@ -95,7 +132,7 @@ class SeriesViewModelTest {
     fun episodeIsMarkedWatchedByHand() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.series.value = Series(summary(7), details)
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             viewModel.setWatched(first, watched = true)
@@ -111,7 +148,7 @@ class SeriesViewModelTest {
     fun statusIsSetForLoadedSeries() =
         runTest(mainDispatcherRule.dispatcher) {
             repository.series.value = Series(summary(7), details)
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             viewModel.setStatus(LibraryStatus.Watching)
@@ -164,7 +201,7 @@ class SeriesViewModelTest {
     fun progressComesFromLibrary() =
         runTest(mainDispatcherRule.dispatcher) {
             library.progress.value = mapOf(first.id to EpisodeProgress(first.id, 10, 100, watched = false))
-            val viewModel = SeriesViewModel(7, repository, library)
+            val viewModel = SeriesViewModel(7, repository, library, settings)
             backgroundScope.launch { viewModel.uiState.collect {} }
 
             assertEquals(setOf(first.id), viewModel.uiState.value.progress.keys)

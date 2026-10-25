@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.core.database.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Index
@@ -22,6 +23,7 @@ data class SeriesEntity(
     val score: Double?,
     val isAiring: Boolean,
     val isActive: Int,
+    @ColumnInfo(defaultValue = "0") val isHentai: Boolean = false,
 )
 
 /** То, что приходит только с `/series/{id}`. Жанры, описания и ссылки всегда читаются целиком — хранятся JSON. */

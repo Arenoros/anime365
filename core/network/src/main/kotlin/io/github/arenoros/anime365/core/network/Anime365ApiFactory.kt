@@ -8,6 +8,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
 const val ANIME365_SITE_URL = "https://smotret-anime.app/"
 const val ANIME365_BASE_URL = "${ANIME365_SITE_URL}api/"
+const val HENTAI365_SITE_URL = "https://hentai365.org/"
+const val HENTAI365_BASE_URL = "${HENTAI365_SITE_URL}api/"
 
 // Спецификация просит называть себя в User-Agent.
 private const val USER_AGENT = "anime365-android (+https://github.com/Arenoros/anime365)"

@@ -81,6 +81,14 @@ internal fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(vertical = KadrSpacing.Space2),
         ) {
+            SectionTitle(R.string.feature_account_settings_catalog)
+            SwitchRow(
+                title = stringResource(R.string.feature_account_settings_adult_content),
+                summary = stringResource(R.string.feature_account_settings_adult_content_summary),
+                checked = settings.adultContent,
+                onCheckedChange = { enabled -> onUpdate { it.copy(adultContent = enabled) } },
+            )
+            HorizontalDivider(Modifier.padding(vertical = KadrSpacing.Space2))
             SectionTitle(R.string.feature_account_settings_notifications)
             SwitchRow(
                 title = stringResource(R.string.feature_account_settings_new_episodes),

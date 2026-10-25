@@ -37,6 +37,9 @@ class LibraryViewModelTest {
     private val series = FakeSeriesRepository()
     private val translations = FakeTranslationRepository()
     private val downloads = FakeEpisodeDownloads()
+    private val settings =
+        io.github.arenoros.anime365.core.testing
+            .FakeSettingsStore()
 
     private val first = Episode(101, 1.0, "1 серия", "tv")
     private val second = Episode(102, 2.0, "2 серия", "tv")
@@ -125,6 +128,25 @@ class LibraryViewModelTest {
         }
 
     @Test
+    fun disablingAdultContentHidesDownloadsWithoutRemovingOrPausingThem() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val translation = Translation(1, first.id, TranslationKind.VoiceRu, "Team", "tv", 720)
+            val stream = VideoStream(emptyList(), null, listOf(StreamQuality(720, "https://site/video")))
+            settings.updateSettings { it.copy(adultContent = true) }
+            downloads.download(frieren.summary.copy(isHentai = true), first, translation, stream)
+            val viewModel = viewModel()
+            backgroundScope.launch { viewModel.uiState.collect {} }
+            val stored = downloads.downloads.value.single()
+            assertEquals(listOf(stored), viewModel.uiState.value.downloads)
+
+            settings.updateSettings { it.copy(adultContent = false) }
+            assertEquals(emptyList<EpisodeDownload>(), viewModel.uiState.value.downloads)
+            assertEquals(listOf(stored), downloads.downloads.value)
+            settings.updateSettings { it.copy(adultContent = true) }
+            assertEquals(listOf(stored), viewModel.uiState.value.downloads)
+        }
+
+    @Test
     fun downloadsAreShownAndRemoved() =
         runTest(mainDispatcherRule.dispatcher) {
             val translation = Translation(1, first.id, TranslationKind.VoiceRu, "AniLibria", "tv", 1080)
@@ -147,7 +169,8 @@ class LibraryViewModelTest {
             assertEquals(emptyList<EpisodeDownload>(), viewModel.uiState.value.downloads)
         }
 
-    private fun viewModel() = LibraryViewModel(library, series, RememberedTranslation(library, translations), downloads)
+    private fun viewModel() =
+        LibraryViewModel(library, series, RememberedTranslation(library, translations), downloads, settings)
 
     private fun TestScope.continueWatching(): LibraryEvent {
         val viewModel = viewModel()

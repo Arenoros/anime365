@@ -41,6 +41,24 @@ class LibraryTransferTest {
     }
 
     @Test
+    fun adultFlagSurvivesExportImportAndMergeWithOlderRecord() =
+        runTest {
+            val adult = row(7, status = "planned").copy(isHentai = true)
+            source.libraryDao().upsertAll(listOf(adult), emptyList())
+            val file = ByteArrayOutputStream()
+            transfer(source).write(file)
+            transfer(target).read(file.toByteArray().inputStream(), ImportMode.Replace)
+            assertTrue(
+                target
+                    .libraryDao()
+                    .allSeries()
+                    .single()
+                    .isHentai,
+            )
+            assertTrue(mergeSeries(listOf(adult), listOf(adult.copy(isHentai = false))).single().isHentai)
+        }
+
+    @Test
     fun replaceRestoresStatusProgressAndChoice() =
         runTest {
             val library = LocalLibraryRepository(source.libraryDao(), FakeSettingsStore(), MutableClock())

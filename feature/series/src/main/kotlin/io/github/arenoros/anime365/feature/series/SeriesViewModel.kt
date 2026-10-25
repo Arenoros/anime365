@@ -8,6 +8,7 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.EpisodeProgress
 import io.github.arenoros.anime365.core.model.LastWatched
@@ -35,6 +36,7 @@ internal data class SeriesUiState(
     val status: LibraryStatus? = null,
     /** Новые Эпизоды на момент открытия страницы. */
     val newEpisodes: Set<Int> = emptySet(),
+    val blocked: Boolean = false,
 ) {
     val watchAction: WatchAction? get() = watchAction(series?.details, lastWatched)
 }
@@ -53,6 +55,7 @@ internal class SeriesViewModel
         @Assisted private val seriesId: Int,
         private val repository: SeriesRepository,
         private val library: LibraryRepository,
+        private val settings: SettingsStore,
     ) : ViewModel() {
         private val refreshing = MutableStateFlow(true)
         private val error = MutableStateFlow<Throwable?>(null)
@@ -70,15 +73,18 @@ internal class SeriesViewModel
                     newAtOpen,
                     ::SeriesLibrary,
                 ),
-            ) { series, refreshing, error, library ->
+                settings.settings,
+            ) { series, refreshing, error, library, settings ->
+                val blocked = series?.summary?.isHentai == true && !settings.adultContent
                 SeriesUiState(
-                    series,
+                    series.takeUnless { blocked },
                     refreshing,
                     error,
                     library.progress,
                     library.lastWatched,
                     library.status,
                     library.newEpisodes,
+                    blocked,
                 )
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SeriesUiState())
 
@@ -106,6 +112,7 @@ internal class SeriesViewModel
                 .series(seriesId)
                 .first()
                 ?.takeIf { it.details != null }
+                ?.takeIf { !it.summary.isHentai || settings.settings.first().adultContent }
                 ?.let { library.markSeen(it) }
         }
 

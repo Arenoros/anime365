@@ -18,6 +18,7 @@ data class SeriesRequest(
     val chips: String?,
     val isAiring: Int?,
     val season: String?,
+    val url: String,
 )
 
 class FakeAnime365Api : Anime365Api {
@@ -30,6 +31,9 @@ class FakeAnime365Api : Anime365Api {
     var feed: () -> List<TranslationDto> = { emptyList() }
     var translationsOfEpisode: (Int) -> List<TranslationDto> = { emptyList() }
     var episodeTranslationRequests = 0
+    var adultEpisodeTranslationRequests = 0
+    var adultTranslationsOfEpisode: (Int) -> List<TranslationDto> = { emptyList() }
+    var adultEmbed: (Int, String) -> ApiResponse<EmbedDto> = { _, _ -> error("adult embed not stubbed") }
 
     /** По Токену: ответ `/me`. Незнакомый Токен — гость, как у настоящего сервера. */
     val users = mutableMapOf<String, UserDto>()
@@ -37,6 +41,7 @@ class FakeAnime365Api : Anime365Api {
     var sessionTokens = mutableMapOf<String, String>()
 
     override suspend fun series(
+        url: String,
         fields: String,
         limit: Int,
         offset: Int,
@@ -46,7 +51,7 @@ class FakeAnime365Api : Anime365Api {
         isActive: Int?,
         season: String?,
     ): ApiResponse<List<SeriesDto>> {
-        val request = SeriesRequest(fields, limit, offset, query, chips, isAiring, season)
+        val request = SeriesRequest(fields, limit, offset, query, chips, isAiring, season, url)
         seriesRequests += request
         return ApiResponse(seriesList(request))
     }
@@ -81,6 +86,20 @@ class FakeAnime365Api : Anime365Api {
         translationId: Int,
         accessToken: String,
     ): ApiResponse<EmbedDto> = embed.invoke(translationId, accessToken)
+
+    override suspend fun adultEpisodeTranslations(
+        episodeId: Int,
+        fields: String,
+        limit: Int,
+    ): ApiResponse<List<TranslationDto>> {
+        adultEpisodeTranslationRequests++
+        return ApiResponse(adultTranslationsOfEpisode(episodeId))
+    }
+
+    override suspend fun adultEmbed(
+        translationId: Int,
+        accessToken: String,
+    ): ApiResponse<EmbedDto> = adultEmbed.invoke(translationId, accessToken)
 
     override suspend fun me(accessToken: String): ApiResponse<UserDto> =
         ApiResponse(users[accessToken] ?: UserDto(isLogined = false, name = "Гость"))

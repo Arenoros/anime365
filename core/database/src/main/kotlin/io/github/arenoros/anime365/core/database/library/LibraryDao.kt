@@ -16,6 +16,9 @@ private const val LAST_WATCHED_SELECT = """
 
 @Dao
 abstract class LibraryDao {
+    @Query("SELECT seriesId FROM library_series WHERE isHentai = 1")
+    abstract fun adultIds(): Flow<List<Int>>
+
     @Query("SELECT * FROM episode_progress WHERE seriesId = :seriesId")
     abstract fun progress(seriesId: Int): Flow<List<EpisodeProgressEntity>>
 
@@ -26,7 +29,12 @@ abstract class LibraryDao {
     abstract fun lastWatched(seriesId: Int): Flow<LastWatchedRow?>
 
     /** Недосмотренные Эпизоды, по одному на аниме, от последних к давним. */
-    @Query("$LAST_WATCHED_SELECT WHERE p.watched = 0 AND p.positionMs > 0 ORDER BY s.lastWatchedAt DESC LIMIT :limit")
+    @Query(
+        """$LAST_WATCHED_SELECT
+        WHERE s.isHentai = 0 AND p.watched = 0 AND p.positionMs > 0
+        ORDER BY s.lastWatchedAt DESC LIMIT :limit
+        """,
+    )
     abstract fun continueWatching(limit: Int): Flow<List<LastWatchedRow>>
 
     @Query("SELECT * FROM library_series WHERE seriesId = :seriesId")
@@ -35,7 +43,7 @@ abstract class LibraryDao {
     /** Аниме со Статусом: сначала те, где есть Новые Эпизоды, потом — что трогали последним. */
     @Query(
         """
-        SELECT s.seriesId, s.title, s.posterUrl, s.status, s.episodeCount,
+        SELECT s.seriesId, s.title, s.posterUrl, s.status, s.episodeCount, s.isHentai,
             (SELECT COUNT(*) FROM episode_progress p WHERE p.seriesId = s.seriesId AND p.watched = 1)
                 AS watchedEpisodes,
             (SELECT COUNT(*) FROM new_episode n WHERE n.seriesId = s.seriesId) AS newEpisodes
@@ -52,10 +60,13 @@ abstract class LibraryDao {
     @Query(
         """
         SELECT COUNT(*) FROM new_episode n JOIN library_series s ON s.seriesId = n.seriesId
-        WHERE s.status = :status
+        WHERE s.status = :status AND (:includeAdult OR s.isHentai = 0)
         """,
     )
-    abstract fun newEpisodeCount(status: String): Flow<Int>
+    abstract fun newEpisodeCount(
+        status: String,
+        includeAdult: Boolean = false,
+    ): Flow<Int>
 
     @Query("SELECT episodeId FROM new_episode WHERE seriesId = :seriesId")
     abstract suspend fun newEpisodeIds(seriesId: Int): List<Int>
@@ -74,7 +85,7 @@ abstract class LibraryDao {
     ) {
         insertSeries(series)
         updateStatus(series.seriesId, series.status, series.statusChangedAt)
-        updateCopies(series.seriesId, series.title, series.posterUrl, series.episodeCount)
+        updateCopies(series.seriesId, series.title, series.posterUrl, series.episodeCount, series.isHentai)
         if (seenUploadedAt != null) updateSeen(series.seriesId, seenUploadedAt)
         if (series.status == null) deleteNewEpisodes(series.seriesId)
     }
@@ -87,8 +98,9 @@ abstract class LibraryDao {
         posterUrl: String?,
         episodeCount: Int?,
         seenUploadedAt: Long?,
+        isHentai: Boolean = false,
     ) {
-        updateCopies(seriesId, title, posterUrl, episodeCount)
+        updateCopies(seriesId, title, posterUrl, episodeCount, isHentai)
         if (seenUploadedAt != null) updateSeen(seriesId, seenUploadedAt)
         deleteNewEpisodes(seriesId)
     }
@@ -146,6 +158,7 @@ abstract class LibraryDao {
         progress: EpisodeProgressEntity,
     ) {
         insertSeries(series)
+        updateCopies(series.seriesId, series.title, series.posterUrl, series.episodeCount, series.isHentai)
         updateSeries(
             series.seriesId,
             series.title,
@@ -181,6 +194,7 @@ abstract class LibraryDao {
         progress: EpisodeProgressEntity,
     ) {
         insertSeries(series)
+        updateCopies(series.seriesId, series.title, series.posterUrl, series.episodeCount, series.isHentai)
         insertProgress(progress)
         updateWatched(progress.episodeId, progress.watched, progress.updatedAt)
         deleteNewEpisode(progress.episodeId)
@@ -208,7 +222,7 @@ abstract class LibraryDao {
 
     @Query(
         """
-        UPDATE library_series SET title = :title, posterUrl = :posterUrl, episodeCount = :episodeCount
+        UPDATE library_series SET title = :title, posterUrl = :posterUrl, episodeCount = :episodeCount, isHentai = :isHentai
         WHERE seriesId = :seriesId
         """,
     )
@@ -217,6 +231,7 @@ abstract class LibraryDao {
         title: String,
         posterUrl: String?,
         episodeCount: Int?,
+        isHentai: Boolean,
     )
 
     @Query("DELETE FROM new_episode WHERE seriesId = :seriesId")

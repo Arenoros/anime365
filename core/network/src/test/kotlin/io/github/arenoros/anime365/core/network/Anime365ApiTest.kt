@@ -29,6 +29,26 @@ class Anime365ApiTest {
     }
 
     @Test
+    fun catalogCanUseAdultHostWithoutChangingOtherEndpoints() =
+        runTest {
+            server.enqueue(MockResponse.Builder().body("""{"data":[{"id":7,"isHentai":1}]}""").build())
+            val items =
+                api
+                    .series(
+                        fields = ApiFields.SERIES_SUMMARY,
+                        limit = 48,
+                        query = "example",
+                        url = server.url("/adult/api/series").toString(),
+                    ).unwrap()
+
+            val request = server.takeRequest()
+            assertEquals("/adult/api/series", request.url.encodedPath)
+            assertEquals("example", request.url.queryParameter("query"))
+            assertNull(request.url.queryParameter("access_token"))
+            assertEquals(1, items.single().isHentai)
+        }
+
+    @Test
     fun seriesListSendsFieldsAndUserAgent() =
         runTest {
             enqueue("series-top.json")
@@ -107,6 +127,41 @@ class Anime365ApiTest {
             } catch (e: ApiException) {
                 assertEquals(404, e.code)
             }
+        }
+
+    @Test
+    fun adultTranslationsAndEmbedUseAdultHost() =
+        runTest {
+            val hosts = mutableListOf<String>()
+            val client =
+                createOkHttpClient()
+                    .newBuilder()
+                    .addInterceptor { chain ->
+                        val request = chain.request()
+                        hosts += request.url.host
+                        val redirected =
+                            server
+                                .url(request.url.encodedPath)
+                                .newBuilder()
+                                .encodedQuery(request.url.encodedQuery)
+                                .build()
+                        chain.proceed(request.newBuilder().url(redirected).build())
+                    }.build()
+            val adultApi = createAnime365Api(server.url("/api/").toString(), client)
+            enqueue("translations-episode-291395.json")
+            enqueue("embed-5987619.json")
+
+            adultApi.adultEpisodeTranslations(281229).unwrap()
+            adultApi.adultEmbed(5752471, "secret").unwrap()
+
+            val translations = server.takeRequest()
+            assertEquals("/api/translations", translations.url.encodedPath)
+            assertEquals("281229", translations.url.queryParameter("episodeId"))
+            assertEquals("1000", translations.url.queryParameter("limit"))
+            val embed = server.takeRequest()
+            assertEquals("/api/translations/embed/5752471", embed.url.encodedPath)
+            assertEquals("secret", embed.url.queryParameter("access_token"))
+            assertEquals(listOf("hentai365.org", "hentai365.org"), hosts)
         }
 
     @Test

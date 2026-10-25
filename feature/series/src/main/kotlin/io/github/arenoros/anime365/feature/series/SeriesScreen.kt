@@ -94,6 +94,10 @@ internal fun SeriesRoute(
         hiltViewModel<SeriesViewModel, SeriesViewModel.Factory>(creationCallback = { it.create(seriesId) }),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(state.blocked) {
+        if (state.blocked) onBack()
+    }
+    if (state.blocked) return
     val requestNotifications = rememberNotificationPermissionRequest()
     SeriesScreen(
         state = state,

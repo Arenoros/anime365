@@ -44,7 +44,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -64,6 +67,8 @@ internal sealed interface PlayerStatus {
 }
 
 internal sealed interface PlayerEvent {
+    data object Close : PlayerEvent
+
     /** У соседнего Эпизода нет Перевода той же Команды: снекбар и Выбор Перевода (docs/screens.md). */
     data class ChooseTranslation(
         val episodeId: Int,
@@ -124,6 +129,25 @@ internal class PlayerViewModel
         private var countdown: Job? = null
 
         init {
+            viewModelScope.launch {
+                combine(
+                    settingsStore.settings,
+                    _uiState
+                        .map {
+                            it.series?.summary?.isHentai
+                        }.distinctUntilChanged(),
+                ) { settings, adult ->
+                    adult == true && !settings.adultContent
+                }.distinctUntilChanged().collect { blocked ->
+                    if (blocked) {
+                        saveNow()
+                        cancelAutoplay()
+                        videoPlayer.stop(session)
+                        _uiState.value = PlayerUiState()
+                        eventChannel.send(PlayerEvent.Close)
+                    }
+                }
+            }
             viewModelScope.launch {
                 libraryRepository.progress(key.seriesId).collect { progress ->
                     _uiState.update { it.copy(progress = progress) }
@@ -251,6 +275,10 @@ internal class PlayerViewModel
                 if (downloaded == null) seriesRepository.refresh(key.seriesId, force = false)
                 // Без названия и Эпизода нечего показать ни на экране, ни в уведомлении.
                 val series = seriesRepository.series(key.seriesId).first() ?: downloaded?.let(::seriesOf)
+                if (series?.summary?.isHentai == true && !settingsStore.settings.first().adultContent) {
+                    eventChannel.send(PlayerEvent.Close)
+                    return@launch
+                }
                 val episode = series?.details?.episodes?.firstOrNull { it.id == episodeId } ?: downloaded?.episode
                 val (translation, stream) =
                     downloaded?.let(::sourceOf) ?: streamSource().getOrElse { return@launch fail(it) }
@@ -258,6 +286,10 @@ internal class PlayerViewModel
                     return@launch fail(IllegalStateException("Episode $episodeId of ${key.seriesId} is gone"))
                 }
                 val settings = settingsStore.settings.first()
+                if (series.summary.isHentai && !settings.adultContent) {
+                    eventChannel.send(PlayerEvent.Close)
+                    return@launch
+                }
                 val target = if (videoPlayer.isMeteredNetwork) settings.mobileHeight else settings.wifiHeight
                 val height = pickHeight(stream.qualities.map { it.height }, target)
                 val url = stream.qualities.first { it.height == height }.url
@@ -319,6 +351,7 @@ internal class PlayerViewModel
                     null,
                     null,
                     ReleaseStatus.Released,
+                    isHentai = download.isHentai,
                 ),
                 details = null,
             )

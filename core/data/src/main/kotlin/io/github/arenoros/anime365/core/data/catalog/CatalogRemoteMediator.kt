@@ -80,8 +80,12 @@ internal class CatalogRemoteMediator(
                     limit = CATALOG_PAGE_SIZE,
                     offset = offset,
                     chips = query.chips.ifEmpty { null },
+                    url = query.url,
                 ).unwrap()
-        return Page(series.withPositions(offset), series.nextOffset(offset))
+        return Page(
+            series.withPositions(offset).filter { (it.second.isHentai == 1) == query.filter.isHentai },
+            series.nextOffset(offset),
+        )
     }
 
     /** Догружает страницы, пока не найдётся хоть одно совпадение с фильтром: иначе Paging встанет. */
@@ -99,6 +103,7 @@ internal class CatalogRemoteMediator(
                         limit = CATALOG_PAGE_SIZE,
                         offset = current,
                         query = query.text,
+                        url = query.url,
                     ).unwrap()
             series.withPositions(current).filterTo(matched) { query.matches(it.second) }
             next = series.nextOffset(current)

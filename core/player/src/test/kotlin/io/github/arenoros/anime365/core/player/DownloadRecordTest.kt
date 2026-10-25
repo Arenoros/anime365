@@ -17,6 +17,14 @@ class DownloadRecordTest {
     private val translation = Translation(5, 101, TranslationKind.SubRu, "YakuSub Studio (Aero)", "bd", 1080)
 
     @Test
+    fun adultClassificationSurvivesDownloadStorage() {
+        val record = DownloadRecord.of(series.copy(isHentai = true), episode, translation, 720, null)
+        val restored = DownloadRecord.decode(record.encode())!!.toModel("url", DownloadState.Completed, 10, 10)
+        assertEquals(true, restored.isHentai)
+        assertEquals(false, DownloadRecord.of(series, episode, translation, 720, null).isHentai)
+    }
+
+    @Test
     fun recordSurvivesRoundTripAndBuildsDownload() {
         val record = DownloadRecord.of(series, episode, translation, 720, "https://site/5.ass")
 

@@ -126,6 +126,7 @@ internal fun mergeSeries(
         val status = if ((new.statusChangedAt ?: 0) > (old.statusChangedAt ?: 0)) new else old
         val playback = if ((new.lastWatchedAt ?: 0) > (old.lastWatchedAt ?: 0)) new else old
         old.copy(
+            isHentai = old.isHentai || new.isHentai,
             status = status.status,
             statusChangedAt = status.statusChangedAt,
             translationType = playback.translationType,
@@ -171,6 +172,7 @@ internal data class SeriesRecord(
     val lastTranslationId: Int? = null,
     val lastWatchedAt: Long? = null,
     val episodes: List<EpisodeRecord> = emptyList(),
+    val isHentai: Boolean = false,
 )
 
 @Serializable
@@ -186,6 +188,7 @@ internal data class EpisodeRecord(
 private fun LibrarySeriesEntity.toRecord(progress: List<EpisodeProgressEntity>) =
     SeriesRecord(
         id = seriesId,
+        isHentai = isHentai,
         title = title,
         posterUrl = posterUrl,
         episodeCount = episodeCount,
@@ -205,6 +208,7 @@ private fun LibrarySeriesEntity.toRecord(progress: List<EpisodeProgressEntity>) 
 private fun SeriesRecord.toEntity() =
     LibrarySeriesEntity(
         seriesId = id,
+        isHentai = isHentai,
         title = title,
         posterUrl = posterUrl,
         translationType = translationType,

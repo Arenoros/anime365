@@ -17,8 +17,11 @@ import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.TranslationChoice
 import io.github.arenoros.anime365.core.model.TranslationKind
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import java.time.Clock
 import javax.inject.Inject
@@ -114,13 +117,20 @@ internal class LocalLibraryRepository
         private val clock: Clock,
     ) : LibraryRepository {
         override fun entries(): Flow<List<LibraryEntry>> =
-            dao.entries().map { rows -> rows.mapNotNull { it.toModel() } }.distinctUntilChanged()
+            combine(dao.entries(), settings.settings) { rows, settings ->
+                rows.filter { settings.adultContent || !it.isHentai }.mapNotNull { it.toModel() }
+            }.distinctUntilChanged()
 
         override fun status(seriesId: Int): Flow<LibraryStatus?> =
             dao.status(seriesId).map(LibraryStatus::of).distinctUntilChanged()
 
+        @OptIn(ExperimentalCoroutinesApi::class)
         override fun newEpisodeCount(): Flow<Int> =
-            dao.newEpisodeCount(LibraryStatus.Watching.key).distinctUntilChanged()
+            settings.settings
+                .map { it.adultContent }
+                .distinctUntilChanged()
+                .flatMapLatest { dao.newEpisodeCount(LibraryStatus.Watching.key, it) }
+                .distinctUntilChanged()
 
         override val hintShown: Flow<Boolean> = settings.libraryHintShown
 
@@ -144,6 +154,7 @@ internal class LocalLibraryRepository
                     status = status?.key,
                     statusChangedAt = clock.millis(),
                     episodeCount = summary.episodeCount,
+                    isHentai = summary.isHentai,
                 ),
                 seenUploadedAt = series.latestUploadedAt,
             )
@@ -153,7 +164,14 @@ internal class LocalLibraryRepository
 
         override suspend fun markSeen(series: Series) {
             val summary = series.summary
-            dao.markSeen(summary.id, summary.title, summary.posterUrl, summary.episodeCount, series.latestUploadedAt)
+            dao.markSeen(
+                summary.id,
+                summary.title,
+                summary.posterUrl,
+                summary.episodeCount,
+                series.latestUploadedAt,
+                summary.isHentai,
+            )
         }
 
         override suspend fun watching(): List<Int> =
@@ -237,6 +255,7 @@ internal class LocalLibraryRepository
                     lastTranslationId = null,
                     lastWatchedAt = null,
                     episodeCount = series.episodeCount,
+                    isHentai = series.isHentai,
                 ),
                 EpisodeProgressEntity(episode.id, series.id, episode.label, 0, 0, watched, now),
             )
@@ -263,6 +282,7 @@ internal class LocalLibraryRepository
                     lastTranslationId = translation.id,
                     lastWatchedAt = now,
                     episodeCount = series.episodeCount,
+                    isHentai = series.isHentai,
                     // Начатое аниме попадает в «Смотрю», если Статус ему ещё не выбирали.
                     status = LibraryStatus.Watching.key,
                     statusChangedAt = now,

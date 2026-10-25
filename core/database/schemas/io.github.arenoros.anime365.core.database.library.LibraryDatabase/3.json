@@ -1,0 +1,206 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "9846d78ab00635a5dbe91958e8199c46",
+    "entities": [
+      {
+        "tableName": "library_series",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`seriesId` INTEGER NOT NULL, `title` TEXT NOT NULL, `posterUrl` TEXT, `translationType` TEXT, `team` TEXT, `lastEpisodeId` INTEGER, `lastTranslationId` INTEGER, `lastWatchedAt` INTEGER, `status` TEXT, `statusChangedAt` INTEGER, `episodeCount` INTEGER, `seenUploadedAt` INTEGER, `isHentai` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`seriesId`))",
+        "fields": [
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "posterUrl",
+            "columnName": "posterUrl",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "translationType",
+            "columnName": "translationType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "team",
+            "columnName": "team",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastEpisodeId",
+            "columnName": "lastEpisodeId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastTranslationId",
+            "columnName": "lastTranslationId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "lastWatchedAt",
+            "columnName": "lastWatchedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "statusChangedAt",
+            "columnName": "statusChangedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "episodeCount",
+            "columnName": "episodeCount",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "seenUploadedAt",
+            "columnName": "seenUploadedAt",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "isHentai",
+            "columnName": "isHentai",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "seriesId"
+          ]
+        }
+      },
+      {
+        "tableName": "episode_progress",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`episodeId` INTEGER NOT NULL, `seriesId` INTEGER NOT NULL, `label` TEXT NOT NULL, `positionMs` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `watched` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`episodeId`))",
+        "fields": [
+          {
+            "fieldPath": "episodeId",
+            "columnName": "episodeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "positionMs",
+            "columnName": "positionMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "watched",
+            "columnName": "watched",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updatedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "episodeId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_episode_progress_seriesId",
+            "unique": false,
+            "columnNames": [
+              "seriesId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_episode_progress_seriesId` ON `${TABLE_NAME}` (`seriesId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "new_episode",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`episodeId` INTEGER NOT NULL, `seriesId` INTEGER NOT NULL, `label` TEXT NOT NULL, `uploadedAt` INTEGER NOT NULL, PRIMARY KEY(`episodeId`))",
+        "fields": [
+          {
+            "fieldPath": "episodeId",
+            "columnName": "episodeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seriesId",
+            "columnName": "seriesId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uploadedAt",
+            "columnName": "uploadedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "episodeId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_new_episode_seriesId",
+            "unique": false,
+            "columnNames": [
+              "seriesId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_new_episode_seriesId` ON `${TABLE_NAME}` (`seriesId`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9846d78ab00635a5dbe91958e8199c46')"
+    ]
+  }
+}

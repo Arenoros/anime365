@@ -29,6 +29,7 @@ data class SeriesDto(
     val descriptions: List<DescriptionDto> = emptyList(),
     val links: List<LinkDto> = emptyList(),
     val episodes: List<EpisodeDto> = emptyList(),
+    val isHentai: Int = 0,
 )
 
 @Serializable

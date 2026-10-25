@@ -67,12 +67,12 @@ internal class OfflineFirstHomeRepository
             feedDao.observe(NEW_EPISODES_SHOWN).map { rows -> rows.mapNotNull { it.toModel() } }
 
         override val ongoing: Flow<List<SeriesSummary>> =
-            listDao.observe(ONGOING_KEY).map { rows -> rows.map { it.toSummary() } }
+            listDao.observe(ONGOING_KEY).map { rows -> rows.filterNot { it.isHentai }.map { it.toSummary() } }
 
         // Сезон вычисляется при подписке: приложение может прожить смену сезона.
         override val seasonTop: Flow<List<SeriesSummary>> =
             flow { emitAll(listDao.observe(SEASON_TOP_KEY_PREFIX + currentSiteSeason(clock))) }
-                .map { rows -> rows.map { it.toSummary() } }
+                .map { rows -> rows.filterNot { it.isHentai }.map { it.toSummary() } }
 
         override suspend fun refresh(force: Boolean): Result<Unit> =
             coroutineScope {

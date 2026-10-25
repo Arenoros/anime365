@@ -24,6 +24,7 @@ class DataStoreSettingsStoreTest {
                     mobileHeight = 360,
                     downloadWifiOnly = false,
                     downloadHeight = 1080,
+                    adultContent = true,
                 )
             }
 
@@ -34,6 +35,7 @@ class DataStoreSettingsStoreTest {
                     mobileHeight = 360,
                     downloadWifiOnly = false,
                     downloadHeight = 1080,
+                    adultContent = true,
                 )
             assertEquals(expected, store.settings.first())
         }

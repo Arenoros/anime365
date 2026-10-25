@@ -29,6 +29,7 @@ data class AppSettings(
     val downloadWifiOnly: Boolean = true,
     val downloadHeight: Int = 720,
     val crashReports: Boolean = false,
+    val adultContent: Boolean = false,
 )
 
 /** Настройки и одноразовые подсказки. Входят в резервную копию Android. */
@@ -81,6 +82,7 @@ internal class DataStoreSettingsStore
                 preferences[DOWNLOAD_WIFI_ONLY] = settings.downloadWifiOnly
                 preferences[DOWNLOAD_HEIGHT] = settings.downloadHeight
                 preferences[CRASH_REPORTS] = settings.crashReports
+                preferences[ADULT_CONTENT] = settings.adultContent
             }
         }
 
@@ -94,6 +96,7 @@ internal class DataStoreSettingsStore
                 downloadWifiOnly = this[DOWNLOAD_WIFI_ONLY] ?: defaults.downloadWifiOnly,
                 downloadHeight = this[DOWNLOAD_HEIGHT] ?: defaults.downloadHeight,
                 crashReports = this[CRASH_REPORTS] ?: defaults.crashReports,
+                adultContent = this[ADULT_CONTENT] ?: defaults.adultContent,
             )
         }
 
@@ -106,6 +109,7 @@ internal class DataStoreSettingsStore
             val DOWNLOAD_WIFI_ONLY = booleanPreferencesKey("download_wifi_only")
             val DOWNLOAD_HEIGHT = intPreferencesKey("download_height")
             val CRASH_REPORTS = booleanPreferencesKey("crash_reports")
+            val ADULT_CONTENT = booleanPreferencesKey("adult_content")
             val UPDATE_CHECKED_AT = longPreferencesKey("update_checked_at")
         }
     }

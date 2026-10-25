@@ -8,8 +8,9 @@ data class CatalogFilter(
     val genreIds: Set<Int> = emptySet(),
     val genreMatch: GenreMatch = GenreMatch.All,
     val ongoingOnly: Boolean = false,
+    val isHentai: Boolean = false,
 ) {
-    val isEmpty: Boolean get() = this == CatalogFilter()
+    val isEmpty: Boolean get() = copy(isHentai = false) == CatalogFilter()
 }
 
 enum class SeriesType { Tv, Movie, Ova, Ona, Special, Music }

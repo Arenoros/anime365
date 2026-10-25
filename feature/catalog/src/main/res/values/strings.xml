@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="feature_catalog_section_anime">Аниме</string>
+    <string name="feature_catalog_section_hentai">Хентай</string>
     <string name="feature_catalog_home_title" translatable="false">anime365</string>
     <string name="feature_catalog_catalog_title">Каталог</string>
     <string name="feature_catalog_search_placeholder">Поиск аниме</string>

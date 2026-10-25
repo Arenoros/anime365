@@ -5,6 +5,7 @@ import io.github.arenoros.anime365.core.model.CatalogFilter
 import io.github.arenoros.anime365.core.model.GenreMatch
 import io.github.arenoros.anime365.core.model.Season
 import io.github.arenoros.anime365.core.model.SeriesType
+import io.github.arenoros.anime365.core.network.HENTAI365_BASE_URL
 import io.github.arenoros.anime365.core.network.model.SeriesDto
 
 internal const val CATALOG_KEY_PREFIX = "catalog"
@@ -21,10 +22,14 @@ internal data class CatalogQuery(
     val chips: String = filter.toChips()
     val isSearch: Boolean = text.isNotEmpty()
     val listKey: String =
-        if (isSearch) "$CATALOG_KEY_PREFIX?query=${text.lowercase()}&$chips" else "$CATALOG_KEY_PREFIX?$chips"
+        (if (isSearch) "$CATALOG_KEY_PREFIX?query=${text.lowercase()}&$chips" else "$CATALOG_KEY_PREFIX?$chips") +
+            if (filter.isHentai) "&hentai=1" else ""
+
+    val url: String = if (filter.isHentai) "${HENTAI365_BASE_URL}series" else "series"
 
     fun matches(series: SeriesDto): Boolean =
-        matchesType(series) &&
+        (series.isHentai == 1) == filter.isHentai &&
+            matchesType(series) &&
             matchesTime(series) &&
             (!filter.ongoingOnly || series.isAiring == 1) &&
             matchesGenres(series)

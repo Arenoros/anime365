@@ -4,7 +4,12 @@ import io.github.arenoros.anime365.core.data.FakeAccountStore
 import io.github.arenoros.anime365.core.data.FakeAnime365Api
 import io.github.arenoros.anime365.core.data.MutableClock
 import io.github.arenoros.anime365.core.data.inMemoryCacheDatabase
+import io.github.arenoros.anime365.core.data.seriesDto
+import io.github.arenoros.anime365.core.data.toDetailsEntity
+import io.github.arenoros.anime365.core.data.toEntity
+import io.github.arenoros.anime365.core.data.toEpisodeEntities
 import io.github.arenoros.anime365.core.database.CacheDatabase
+import io.github.arenoros.anime365.core.database.model.ListStateEntity
 import io.github.arenoros.anime365.core.datastore.StoredAccount
 import io.github.arenoros.anime365.core.model.StreamQuality
 import io.github.arenoros.anime365.core.model.TranslationKind
@@ -43,6 +48,62 @@ class TranslationRepositoryTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun adultTranslationsIgnoreOldEmptyOrdinaryCache() =
+        runTest {
+            cacheAdultEpisode()
+            database.translationDao().replace(
+                281229,
+                emptyList(),
+                ListStateEntity("translations/281229", null, clock.millis()),
+            )
+            api.adultTranslationsOfEpisode = { listOf(TranslationDto(id = 5752471, type = "voiceRu")) }
+
+            val translations = repository.load(281229).getOrThrow()
+
+            assertEquals(listOf(5752471), translations.map { it.id })
+            assertEquals(1, api.adultEpisodeTranslationRequests)
+            assertEquals(0, api.episodeTranslationRequests)
+        }
+
+    @Test
+    fun adultStreamUsesAdultEndpointAndResolvesRelativeLinksOnAdultSite() =
+        runTest {
+            cacheAdultEpisode()
+            store.save(StoredAccount("token", "User", null))
+            api.adultTranslationsOfEpisode = { listOf(TranslationDto(id = 5752471, type = "voiceRu")) }
+            api.adultEmbed = { id, token ->
+                assertEquals(5752471, id)
+                assertEquals("token", token)
+                ApiResponse(
+                    EmbedDto(
+                        stream = listOf(StreamDto(720, listOf("https://cdn/video"))),
+                        subtitlesUrl = "/episodeTranslations/5752471.ass",
+                        download = listOf(DownloadDto(720, "/translations/mp4/5752471?download=1")),
+                    ),
+                )
+            }
+            repository.load(281229).getOrThrow()
+
+            val stream = repository.stream(5752471).getOrThrow()
+
+            assertEquals("https://hentai365.org/episodeTranslations/5752471.ass", stream.subtitlesUrl)
+            assertEquals("https://hentai365.org/translations/mp4/5752471?download=1", stream.downloads.single().url)
+        }
+
+    private suspend fun cacheAdultEpisode() {
+        val dto =
+            seriesDto(24504).copy(
+                isHentai = 1,
+                episodes =
+                    listOf(
+                        io.github.arenoros.anime365.core.network.model
+                            .EpisodeDto(id = 281229, episodeInt = 1.0),
+                    ),
+            )
+        database.seriesDao().saveDetails(dto.toEntity()!!, dto.toDetailsEntity(clock.millis()), dto.toEpisodeEntities())
     }
 
     @Test

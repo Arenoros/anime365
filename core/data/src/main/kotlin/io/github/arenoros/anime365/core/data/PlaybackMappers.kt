@@ -36,14 +36,14 @@ internal fun TranslationEntity.toModel(): Translation =
     Translation(id, episodeId, TranslationKind.of(type), team, source, height)
 
 /** Пустой Видеопоток — сбой на стороне сайта, а не «нечего смотреть». */
-internal fun EmbedDto.toModel(): VideoStream {
+internal fun EmbedDto.toModel(siteUrl: String = ANIME365_SITE_URL): VideoStream {
     val qualities =
         stream
             .filter { it.urls.isNotEmpty() }
             .sortedByDescending { it.height }
             .map { StreamQuality(it.height, it.urls.first()) }
     check(qualities.isNotEmpty()) { "Empty video stream" }
-    val site = URI(ANIME365_SITE_URL)
+    val site = URI(siteUrl)
     val downloads =
         download
             .sortedByDescending {

@@ -28,6 +28,7 @@ import io.github.arenoros.anime365.feature.player.navigation.PlayerKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -35,6 +36,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -68,6 +70,40 @@ class PlayerViewModelTest {
     private val settings = FakeSettingsStore()
     private val downloads = FakeEpisodeDownloads()
     private val player = FakeVideoPlayer()
+
+    @Test
+    fun turningOffAdultContentStopsPlaybackAndClearsMetadata() =
+        runTest(mainDispatcherRule.dispatcher) {
+            settings.updateSettings { it.copy(adultContent = true) }
+            seriesRepository.series.value = series.copy(summary = series.summary.copy(isHentai = true))
+            translations.translations.value = mapOf(first.id to listOf(anilibria))
+            val viewModel = viewModel()
+            assertEquals(1, player.played.size)
+            player.playing.value = true
+            player.positionMs = 1234
+            library.saved.clear()
+            player.onStop = {
+                player.positionMs = 0
+                player.playing.value = false
+            }
+
+            settings.updateSettings { it.copy(adultContent = false) }
+            assertEquals(listOf(1), player.stopped)
+            assertNull(viewModel.uiState.value.series)
+            assertEquals(PlayerEvent.Close, viewModel.events.first())
+            assertEquals(1234L, library.saved.last().positionMs)
+            assertEquals(listOf(1234L), library.saved.map { it.positionMs })
+        }
+
+    @Test
+    fun disabledAdultContentCannotStartFromDirectLink() =
+        runTest(mainDispatcherRule.dispatcher) {
+            seriesRepository.series.value = series.copy(summary = series.summary.copy(isHentai = true))
+            val viewModel = viewModel()
+            assertTrue(player.played.isEmpty())
+            assertTrue(translations.streamRequests.isEmpty())
+            assertEquals(PlayerEvent.Close, viewModel.events.first())
+        }
 
     @Test
     fun startsFromSavedPositionAtResolutionForNetwork() =
@@ -338,6 +374,7 @@ class PlayerViewModelTest {
         override var speed = 1f
         val played = mutableListOf<Pair<PlayerMedia, Long>>()
         val stopped = mutableListOf<Int>()
+        var onStop: () -> Unit = {}
 
         override fun play(
             media: PlayerMedia,
@@ -351,6 +388,7 @@ class PlayerViewModelTest {
 
         override fun stop(session: Int) {
             stopped += session
+            onStop()
         }
     }
 }

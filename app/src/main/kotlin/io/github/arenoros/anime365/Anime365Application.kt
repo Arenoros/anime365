@@ -41,6 +41,11 @@ class Anime365Application :
     override fun onCreate() {
         super.onCreate()
         NewEpisodesCheck.schedule(this)
+        scope.launch {
+            settings.settings.map { it.adultContent }.distinctUntilChanged().collect { allowed ->
+                if (!allowed) NewEpisodesCheck.hideAdultNotifications(this@Anime365Application)
+            }
+        }
         // Переключатель в Настройках действует сразу, без перезапуска.
         // Сбой раньше, чем прочитаны настройки, в отчёт не попадёт.
         if (CrashReports.available) {

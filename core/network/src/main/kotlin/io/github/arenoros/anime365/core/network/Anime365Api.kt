@@ -10,6 +10,7 @@ import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Url
 
 /**
  * Публичное API anime365 (docs/anime365-openapi.yaml, поведение сверх спецификации — docs/api-notes.md).
@@ -20,8 +21,9 @@ interface Anime365Api {
      * Сортировка — по рейтингу MyAnimeList. [chips] и [query] не сочетаются: при `chips` сервер
      * игнорирует `query`.
      */
-    @GET("series")
+    @GET
     suspend fun series(
+        @Url url: String = "series",
         @Query("fields") fields: String,
         @Query("limit") limit: Int,
         @Query("offset") offset: Int = 0,
@@ -53,12 +55,25 @@ interface Anime365Api {
         @Query("limit") limit: Int = EPISODE_TRANSLATIONS_LIMIT,
     ): ApiResponse<List<TranslationDto>>
 
+    @GET("${HENTAI365_BASE_URL}translations")
+    suspend fun adultEpisodeTranslations(
+        @Query("episodeId") episodeId: Int,
+        @Query("fields") fields: String = ApiFields.TRANSLATION,
+        @Query("limit") limit: Int = EPISODE_TRANSLATIONS_LIMIT,
+    ): ApiResponse<List<TranslationDto>>
+
     /**
      * Видеопоток. Без входа и без Подписки — ошибка 403. Токен API принимает только параметром
      * запроса (ADR 0005).
      */
     @GET("translations/embed/{id}")
     suspend fun embed(
+        @Path("id") translationId: Int,
+        @Query("access_token") accessToken: String,
+    ): ApiResponse<EmbedDto>
+
+    @GET("${HENTAI365_BASE_URL}translations/embed/{id}")
+    suspend fun adultEmbed(
         @Path("id") translationId: Int,
         @Query("access_token") accessToken: String,
     ): ApiResponse<EmbedDto>
@@ -83,7 +98,8 @@ private const val EPISODE_TRANSLATIONS_LIMIT = 1000
 /** Без `fields` в каждом элементе приходят все внешние ссылки и описания (docs/api-notes.md). */
 object ApiFields {
     const val SERIES_SUMMARY =
-        "id,titles,posterUrlSmall,typeTitle,type,year,season,myAnimeListScore,isAiring,isActive,numberOfEpisodes"
+        "id,titles,posterUrlSmall,typeTitle,type,year,season,myAnimeListScore,isAiring,isActive," +
+            "numberOfEpisodes,isHentai"
 
     /** Для поиска: фильтры к результатам `query` применяются на устройстве, им нужны жанры. */
     const val SERIES_SEARCH = "$SERIES_SUMMARY,genres"

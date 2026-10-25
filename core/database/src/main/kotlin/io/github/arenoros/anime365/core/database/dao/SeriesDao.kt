@@ -13,6 +13,9 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 abstract class SeriesDao {
+    @Query("SELECT id FROM series WHERE isHentai = 1")
+    abstract fun adultIds(): Flow<List<Int>>
+
     @Transaction
     @Query("SELECT * FROM series WHERE id = :id")
     abstract fun observe(id: Int): Flow<SeriesWithDetails?>

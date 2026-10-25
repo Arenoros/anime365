@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.core.database
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
@@ -29,7 +30,8 @@ import io.github.arenoros.anime365.core.database.model.TranslationEntity
         FeedEpisodeEntity::class,
         TranslationEntity::class,
     ],
-    version = 3,
+    version = 4,
+    autoMigrations = [AutoMigration(from = 3, to = 4)],
 )
 @TypeConverters(Converters::class)
 abstract class CacheDatabase : RoomDatabase() {

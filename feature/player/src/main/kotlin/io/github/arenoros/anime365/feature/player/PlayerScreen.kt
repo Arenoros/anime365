@@ -89,6 +89,10 @@ internal fun PlayerRoute(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
+                PlayerEvent.Close -> {
+                    onClose()
+                }
+
                 is PlayerEvent.ChooseTranslation -> {
                     launch { snackbars.showSnackbar(noSameTeam) }
                     onChooseTranslation(event.episodeId)

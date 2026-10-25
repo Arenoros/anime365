@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.core.database.library
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -25,6 +26,7 @@ data class LibrarySeriesEntity(
     val statusChangedAt: Long? = null,
     val episodeCount: Int? = null,
     val seenUploadedAt: Long? = null,
+    @ColumnInfo(defaultValue = "0") val isHentai: Boolean = false,
 )
 
 /** Новый Эпизод аниме со Статусом «Смотрю»: строка живёт, пока аниме не открыли или Эпизод не начали смотреть. */
@@ -45,6 +47,7 @@ data class LibraryEntryRow(
     val episodeCount: Int?,
     val watchedEpisodes: Int,
     val newEpisodes: Int,
+    val isHentai: Boolean = false,
 )
 
 /** Прогресс Эпизода. [label] — копией, по той же причине, что название аниме. */

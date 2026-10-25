@@ -14,6 +14,7 @@ data class SeriesSummary(
     val season: String?,
     val score: Double?,
     val status: ReleaseStatus,
+    val isHentai: Boolean = false,
 )
 
 enum class ReleaseStatus { Ongoing, Released, Announced }

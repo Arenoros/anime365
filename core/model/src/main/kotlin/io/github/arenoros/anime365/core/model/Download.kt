@@ -18,6 +18,7 @@ data class EpisodeDownload(
     val state: DownloadState,
     val bytesDownloaded: Long,
     val contentLength: Long?,
+    val isHentai: Boolean = false,
 ) {
     /** От 0 до 1; `null`, пока размер неизвестен. */
     val progress: Float?

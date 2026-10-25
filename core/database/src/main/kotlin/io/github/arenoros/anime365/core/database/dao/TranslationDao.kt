@@ -11,6 +11,18 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 abstract class TranslationDao {
+    @Query("SELECT s.isHentai FROM episodes e JOIN series s ON s.id = e.seriesId WHERE e.id = :episodeId")
+    abstract suspend fun isAdultEpisode(episodeId: Int): Boolean?
+
+    @Query(
+        """
+        SELECT s.isHentai FROM translations t
+        JOIN episodes e ON e.id = t.episodeId JOIN series s ON s.id = e.seriesId
+        WHERE t.id = :translationId
+    """,
+    )
+    abstract suspend fun isAdultTranslation(translationId: Int): Boolean?
+
     @Query("SELECT * FROM translations WHERE episodeId = :episodeId ORDER BY position")
     abstract fun observe(episodeId: Int): Flow<List<TranslationEntity>>
 

@@ -6,6 +6,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
 import io.github.arenoros.anime365.core.data.repository.RememberedTranslation
 import io.github.arenoros.anime365.core.data.repository.SeriesRepository
+import io.github.arenoros.anime365.core.datastore.SettingsStore
 import io.github.arenoros.anime365.core.model.Episode
 import io.github.arenoros.anime365.core.model.EpisodeDownload
 import io.github.arenoros.anime365.core.model.LibraryEntry
@@ -61,13 +62,20 @@ internal class LibraryViewModel
         private val series: SeriesRepository,
         private val rememberedTranslation: RememberedTranslation,
         private val episodeDownloads: EpisodeDownloads,
+        settings: SettingsStore,
     ) : ViewModel() {
         private val eventChannel = Channel<LibraryEvent>(Channel.BUFFERED)
         val events: Flow<LibraryEvent> = eventChannel.receiveAsFlow()
 
         val uiState: StateFlow<LibraryUiState> =
-            combine(library.entries(), library.hintShown, episodeDownloads.downloads, ::LibraryUiState)
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), LibraryUiState())
+            combine(
+                library.entries(),
+                library.hintShown,
+                episodeDownloads.downloads,
+                settings.settings,
+            ) { entries, hint, downloads, settings ->
+                LibraryUiState(entries, hint, downloads.filter { settings.adultContent || !it.isHentai })
+            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), LibraryUiState())
 
         fun retryDownload(download: EpisodeDownload) = episodeDownloads.retry(download.translation.id)
 

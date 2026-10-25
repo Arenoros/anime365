@@ -33,13 +33,16 @@ internal class NewEpisodesWorker
         private val settings: SettingsStore,
     ) : CoroutineWorker(context, params) {
         override suspend fun doWork(): Result {
-            val notify = settings.settings.first().newEpisodeNotifications
             library.watching().forEach { id ->
                 // Недоступная страница одного аниме не мешает проверить остальные.
                 if (series.refresh(id, force = true).isFailure) return@forEach
                 val loaded = series.series(id).first() ?: return@forEach
                 val fresh = library.recordNewEpisodes(loaded)
-                if (notify && fresh.isNotEmpty()) notifier.notify(loaded.summary, fresh)
+                val current = settings.settings.first()
+                val visible = current.adultContent || !loaded.summary.isHentai
+                if (current.newEpisodeNotifications && visible && fresh.isNotEmpty()) {
+                    notifier.notify(loaded.summary, fresh)
+                }
             }
             return Result.success()
         }
@@ -47,6 +50,15 @@ internal class NewEpisodesWorker
 
 /** Расписание проверки Новых Эпизодов: раз в 6 часов, когда есть сеть (docs/roadmap.md, M3). */
 object NewEpisodesCheck {
+    fun hideAdultNotifications(context: Context) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            val manager = context.getSystemService(android.app.NotificationManager::class.java)
+            manager.activeNotifications.filter { it.tag == ADULT_NOTIFICATION_TAG }.forEach {
+                manager.cancel(it.tag, it.id)
+            }
+        }
+    }
+
     private const val WORK_NAME = "new_episodes"
     private const val PERIOD_HOURS = 6L
 

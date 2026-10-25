@@ -9,7 +9,9 @@ import io.github.arenoros.anime365.core.datastore.AccountStore
 import io.github.arenoros.anime365.core.model.Account
 import io.github.arenoros.anime365.core.model.Translation
 import io.github.arenoros.anime365.core.model.VideoStream
+import io.github.arenoros.anime365.core.network.ANIME365_SITE_URL
 import io.github.arenoros.anime365.core.network.Anime365Api
+import io.github.arenoros.anime365.core.network.HENTAI365_SITE_URL
 import io.github.arenoros.anime365.core.network.model.ApiException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -63,14 +65,22 @@ internal class OfflineFirstTranslationRepository
             force: Boolean,
         ): Result<Unit> =
             catchingFailures {
-                val key = "translations/$episodeId"
+                val adult = dao.isAdultEpisode(episodeId) == true
+                val key = if (adult) "hentai-translations/$episodeId" else "translations/$episodeId"
                 val fetchedAt = dao.fetchedAt(key)
                 if (!force && fetchedAt != null && clock.millis() - fetchedAt < TRANSLATIONS_TTL_MILLIS) {
                     return@catchingFailures
                 }
+                val response =
+                    if (adult) {
+                        api.adultEpisodeTranslations(
+                            episodeId,
+                        )
+                    } else {
+                        api.episodeTranslations(episodeId)
+                    }
                 val translations =
-                    api
-                        .episodeTranslations(episodeId)
+                    response
                         .unwrap()
                         .sortedByDescending { it.priority }
                         .mapIndexed { position, dto -> dto.toEntity(episodeId, position) }
@@ -83,9 +93,10 @@ internal class OfflineFirstTranslationRepository
         override suspend fun stream(translationId: Int): Result<VideoStream> =
             catchingFailures {
                 val token = store.account.first()?.accessToken ?: throw NotLoggedInException()
+                val adult = dao.isAdultTranslation(translationId) == true
                 val embed =
                     try {
-                        api.embed(translationId, token).unwrap()
+                        (if (adult) api.adultEmbed(translationId, token) else api.embed(translationId, token)).unwrap()
                     } catch (e: ApiException) {
                         if (e.code != HTTP_FORBIDDEN) throw e
                         // 403 и без входа, и без Подписки: различаем по свежему ответу /api/me.
@@ -96,6 +107,6 @@ internal class OfflineFirstTranslationRepository
                             NotLoggedInException()
                         }
                     }
-                embed.toModel()
+                embed.toModel(if (adult) HENTAI365_SITE_URL else ANIME365_SITE_URL)
             }
     }

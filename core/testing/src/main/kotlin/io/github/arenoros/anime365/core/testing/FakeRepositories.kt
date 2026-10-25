@@ -236,6 +236,7 @@ class FakeEpisodeDownloads : EpisodeDownloads {
                 DownloadState.Queued,
                 bytesDownloaded = 0,
                 contentLength = null,
+                isHentai = series.isHentai,
             )
     }
 
