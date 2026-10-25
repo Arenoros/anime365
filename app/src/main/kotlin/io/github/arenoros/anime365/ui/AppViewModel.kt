@@ -6,12 +6,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.arenoros.anime365.core.data.ContentVisibility
 import io.github.arenoros.anime365.core.data.repository.LibraryRepository
 import io.github.arenoros.anime365.core.data.repository.RememberedTranslation
-import io.github.arenoros.anime365.core.data.repository.SeriesRepository
 import io.github.arenoros.anime365.core.player.EpisodeDownloads
 import io.github.arenoros.anime365.core.player.VideoPlayer
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
@@ -29,8 +29,7 @@ internal class AppViewModel
         private val rememberedTranslation: RememberedTranslation,
         downloads: EpisodeDownloads,
         val videoPlayer: VideoPlayer,
-        private val visibility: ContentVisibility,
-        private val series: SeriesRepository,
+        visibility: ContentVisibility,
     ) : ViewModel() {
         init {
             downloads.resume()
@@ -48,11 +47,8 @@ internal class AppViewModel
                 hidden + if (allowed) emptySet() else downloads.filter { it.isHentai }.map { it.seriesId }.toSet()
             }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-        suspend fun canOpenSeries(id: Int): Boolean {
-            series.refresh(id, force = false)
-            val summary = series.series(id).first()?.summary ?: return false
-            return !summary.isHentai || visibility.adultContent.first()
-        }
+        /** Без сети: признак 18+ — из кэша, копии в Библиотеке и записей Скачивания. */
+        suspend fun canOpenSeries(id: Int): Boolean = id !in hiddenSeriesIds.filterNotNull().first()
 
         /** `id` Перевода запомненной Команды; `null` — нужен Выбор Перевода. */
         suspend fun rememberedTranslationId(

@@ -98,7 +98,7 @@ abstract class LibraryDao {
         posterUrl: String?,
         episodeCount: Int?,
         seenUploadedAt: Long?,
-        isHentai: Boolean = false,
+        isHentai: Boolean,
     ) {
         updateCopies(seriesId, title, posterUrl, episodeCount, isHentai)
         if (seenUploadedAt != null) updateSeen(seriesId, seenUploadedAt)

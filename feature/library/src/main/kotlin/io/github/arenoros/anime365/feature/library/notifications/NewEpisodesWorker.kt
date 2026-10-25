@@ -1,5 +1,6 @@
 package io.github.arenoros.anime365.feature.library.notifications
 
+import android.app.NotificationManager
 import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.Constraints
@@ -50,12 +51,11 @@ internal class NewEpisodesWorker
 
 /** Расписание проверки Новых Эпизодов: раз в 6 часов, когда есть сеть (docs/roadmap.md, M3). */
 object NewEpisodesCheck {
+    /** Контент 18+ выключили: уже показанные уведомления о нём снимаются. */
     fun hideAdultNotifications(context: Context) {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            val manager = context.getSystemService(android.app.NotificationManager::class.java)
-            manager.activeNotifications.filter { it.tag == ADULT_NOTIFICATION_TAG }.forEach {
-                manager.cancel(it.tag, it.id)
-            }
+        val manager = context.getSystemService(NotificationManager::class.java)
+        manager.activeNotifications.filter { it.tag == ADULT_NOTIFICATION_TAG }.forEach {
+            manager.cancel(it.tag, it.id)
         }
     }
 
