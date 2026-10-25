@@ -63,6 +63,7 @@ internal fun CatalogRoute(
     CatalogScreen(
         query = query,
         filter = filter,
+        adultContent = adultContent,
         series = viewModel.series.collectAsLazyPagingItems(),
         focusSearch = key.focusSearch,
         onQueryChange = viewModel::onQueryChange,
@@ -70,7 +71,6 @@ internal fun CatalogRoute(
         onReset = viewModel::reset,
         onOpenSeries = onOpenSeries,
         onBack = onBack,
-        adultContent = adultContent,
     )
 }
 
@@ -78,6 +78,7 @@ internal fun CatalogRoute(
 internal fun CatalogScreen(
     query: String,
     filter: CatalogFilter,
+    adultContent: Boolean,
     series: LazyPagingItems<SeriesSummary>,
     focusSearch: Boolean,
     onQueryChange: (String) -> Unit,
@@ -86,7 +87,6 @@ internal fun CatalogScreen(
     onOpenSeries: (Int) -> Unit,
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
-    adultContent: Boolean = false,
 ) {
     Scaffold(
         modifier = modifier,

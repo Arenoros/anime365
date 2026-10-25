@@ -12,6 +12,7 @@ import io.github.arenoros.anime365.core.model.SeriesSummary
 import io.github.arenoros.anime365.core.model.WatchAction
 import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
 import io.github.arenoros.anime365.core.testing.FakeSeriesRepository
+import io.github.arenoros.anime365.core.testing.FakeSettingsStore
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -23,9 +24,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class SeriesViewModelTest {
-    private val settings =
-        io.github.arenoros.anime365.core.testing
-            .FakeSettingsStore()
+    private val settings = FakeSettingsStore()
 
     @Test
     fun disabledAdultContentNeverExposesCachedDetails() =

@@ -133,7 +133,7 @@ internal fun SeriesWithDetails.toModel(): Series =
             },
     )
 
-/** `null`, пока аниме этого Эпизода не загружено. */
+/** `null`, пока аниме этого Эпизода не загружено, и для аниме 18+: общая лента — только обычное аниме. */
 internal fun FeedEpisodeWithSeries.toModel(): FeedEpisode? =
     series?.takeUnless { it.isHentai }?.let { series ->
         FeedEpisode(

@@ -19,6 +19,7 @@ import io.github.arenoros.anime365.core.model.VideoStream
 import io.github.arenoros.anime365.core.testing.FakeEpisodeDownloads
 import io.github.arenoros.anime365.core.testing.FakeLibraryRepository
 import io.github.arenoros.anime365.core.testing.FakeSeriesRepository
+import io.github.arenoros.anime365.core.testing.FakeSettingsStore
 import io.github.arenoros.anime365.core.testing.FakeTranslationRepository
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import kotlinx.coroutines.launch
@@ -37,9 +38,7 @@ class LibraryViewModelTest {
     private val series = FakeSeriesRepository()
     private val translations = FakeTranslationRepository()
     private val downloads = FakeEpisodeDownloads()
-    private val settings =
-        io.github.arenoros.anime365.core.testing
-            .FakeSettingsStore()
+    private val settings = FakeSettingsStore()
 
     private val first = Episode(101, 1.0, "1 серия", "tv")
     private val second = Episode(102, 2.0, "2 серия", "tv")

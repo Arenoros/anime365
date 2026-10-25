@@ -61,6 +61,7 @@ class CatalogScreenScreenshotTest {
         CatalogScreen(
             query = query,
             filter = filter,
+            adultContent = adultContent,
             series = pages,
             focusSearch = false,
             onQueryChange = {},
@@ -68,7 +69,6 @@ class CatalogScreenScreenshotTest {
             onReset = {},
             onOpenSeries = {},
             onBack = null,
-            adultContent = adultContent,
         )
     }
 }
