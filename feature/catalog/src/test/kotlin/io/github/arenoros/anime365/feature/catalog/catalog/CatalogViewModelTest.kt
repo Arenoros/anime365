@@ -6,6 +6,7 @@ import io.github.arenoros.anime365.core.data.repository.CatalogRepository
 import io.github.arenoros.anime365.core.model.CatalogFilter
 import io.github.arenoros.anime365.core.model.Season
 import io.github.arenoros.anime365.core.model.SeriesSummary
+import io.github.arenoros.anime365.core.testing.FakeSettingsStore
 import io.github.arenoros.anime365.core.testing.MainDispatcherRule
 import io.github.arenoros.anime365.feature.catalog.navigation.CatalogKey
 import io.github.arenoros.anime365.feature.catalog.summary
@@ -29,9 +30,7 @@ class CatalogViewModelTest {
     val mainDispatcherRule = MainDispatcherRule(StandardTestDispatcher())
 
     private val repository = FakeCatalogRepository()
-    private val settings =
-        io.github.arenoros.anime365.core.testing
-            .FakeSettingsStore()
+    private val settings = FakeSettingsStore()
 
     @Test
     fun switchingSectionKeepsSearchAndFiltersAndDisablingReturnsToAnime() =
@@ -66,21 +65,6 @@ class CatalogViewModelTest {
             val viewModel = CatalogViewModel(CatalogKey.Root, repository, settings)
             viewModel.onFilterChange(CatalogFilter(isHentai = true))
             assertEquals(false, viewModel.filter.value.isHentai)
-        }
-
-    @Test
-    fun pagesOnlyExposeTheSelectedSectionEvenWhileSettingsAllowBoth() =
-        runTest(mainDispatcherRule.dispatcher) {
-            settings.updateSettings { it.copy(adultContent = true) }
-            repository.items = listOf(summary(1), summary(2).copy(isHentai = true))
-            val viewModel = CatalogViewModel(CatalogKey.Root, repository, settings)
-            val normal = viewModel.series.first()
-            assertEquals(listOf(1), flowOf(normal).asSnapshot().map { it.id })
-            runCurrent()
-            viewModel.onFilterChange(CatalogFilter(isHentai = true))
-            runCurrent()
-            val adult = viewModel.series.first()
-            assertEquals(listOf(2), flowOf(adult).asSnapshot().map { it.id })
         }
 
     @Test

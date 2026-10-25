@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
-import androidx.paging.filter
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -49,10 +48,6 @@ internal class CatalogViewModel
                 .map { it.adultContent }
                 .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-        private val adultSection =
-            combine(adultContent, _filter) { allowed, filter -> allowed && filter.isHentai }
-                .distinctUntilChanged()
-
         init {
             viewModelScope.launch {
                 adultContent.collect { allowed ->
@@ -75,7 +70,6 @@ internal class CatalogViewModel
                 .distinctUntilChanged()
                 .flatMapLatest { (query, filter) -> repository.catalog(query, filter) }
                 .cachedIn(viewModelScope)
-                .combine(adultSection) { page, adult -> page.filter { it.isHentai == adult } }
 
         fun onQueryChange(query: String) {
             _query.value = query

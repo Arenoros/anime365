@@ -67,6 +67,22 @@ class CatalogRemoteMediatorTest {
         }
 
     @Test
+    fun adultCatalogKeepsOnlyItsSectionInSeparateCache() =
+        runTest {
+            api.seriesList = { listOf(seriesDto(7).copy(isHentai = 1), seriesDto(8)) }
+            val adult = CatalogQuery("", CatalogFilter(ongoingOnly = true, isHentai = true))
+            val normal = CatalogQuery("", CatalogFilter(ongoingOnly = true))
+
+            mediator(adult).load(LoadType.REFRESH, pagingState)
+            mediator(normal).load(LoadType.REFRESH, pagingState)
+
+            assertEquals(listOf("https://hentai365.org/api/series", "series"), api.seriesRequests.map { it.url })
+            assertEquals(listOf("isAiring=1", "isAiring=1"), api.seriesRequests.map { it.chips })
+            assertEquals(listOf(7), dao.observe(adult.listKey).first().map { it.id })
+            assertEquals(listOf(8), dao.observe(normal.listKey).first().map { it.id })
+        }
+
+    @Test
     fun refreshStoresFirstPageInServerOrder() =
         runTest {
             api.seriesList = { request -> page(from = request.offset + 1) }

@@ -132,7 +132,6 @@ internal fun CatalogScreen(
                 canReset = query.isNotEmpty() || !filter.isEmpty,
                 onReset = onReset,
                 onOpenSeries = onOpenSeries,
-                isHentai = adultContent && filter.isHentai,
             )
         }
     }
@@ -144,7 +143,6 @@ private fun CatalogGrid(
     canReset: Boolean,
     onReset: () -> Unit,
     onOpenSeries: (Int) -> Unit,
-    isHentai: Boolean,
 ) {
     val refresh = series.loadState.refresh
     when {
@@ -171,9 +169,7 @@ private fun CatalogGrid(
                 ) {
                     if (series.itemCount == 0) items(columns * PLACEHOLDER_ROWS) { PosterCardPlaceholder() }
                     items(series.itemCount, key = series.itemKey { it.id }) { index ->
-                        series[index]?.takeIf { it.isHentai == isHentai }?.let { item ->
-                            SeriesPosterCard(item, onClick = { onOpenSeries(item.id) })
-                        }
+                        series[index]?.let { item -> SeriesPosterCard(item, onClick = { onOpenSeries(item.id) }) }
                     }
                     val append = series.loadState.append
                     if (append is LoadState.Loading) items(columns) { PosterCardPlaceholder() }

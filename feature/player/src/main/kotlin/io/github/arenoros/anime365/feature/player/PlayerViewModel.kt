@@ -275,6 +275,7 @@ internal class PlayerViewModel
                 if (downloaded == null) seriesRepository.refresh(key.seriesId, force = false)
                 // Без названия и Эпизода нечего показать ни на экране, ни в уведомлении.
                 val series = seriesRepository.series(key.seriesId).first() ?: downloaded?.let(::seriesOf)
+                // До запросов Переводов и Видеопотока; выключение 18+ во время загрузки ловит подписка в init.
                 if (series?.summary?.isHentai == true && !settingsStore.settings.first().adultContent) {
                     eventChannel.send(PlayerEvent.Close)
                     return@launch
@@ -286,10 +287,6 @@ internal class PlayerViewModel
                     return@launch fail(IllegalStateException("Episode $episodeId of ${key.seriesId} is gone"))
                 }
                 val settings = settingsStore.settings.first()
-                if (series.summary.isHentai && !settings.adultContent) {
-                    eventChannel.send(PlayerEvent.Close)
-                    return@launch
-                }
                 val target = if (videoPlayer.isMeteredNetwork) settings.mobileHeight else settings.wifiHeight
                 val height = pickHeight(stream.qualities.map { it.height }, target)
                 val url = stream.qualities.first { it.height == height }.url
