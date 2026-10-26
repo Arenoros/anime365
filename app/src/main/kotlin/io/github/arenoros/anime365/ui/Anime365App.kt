@@ -4,7 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,6 +25,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -50,7 +57,10 @@ import io.github.arenoros.anime365.R
 import io.github.arenoros.anime365.core.designsystem.component.BottomSheetSceneStrategy
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBar
 import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationBarItem
+import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationRail
+import io.github.arenoros.anime365.core.designsystem.component.KadrNavigationRailItem
 import io.github.arenoros.anime365.core.designsystem.component.LocalTvContentCovered
+import io.github.arenoros.anime365.core.designsystem.component.isTelevision
 import io.github.arenoros.anime365.core.player.VideoPlayer
 import io.github.arenoros.anime365.feature.account.navigation.LoginKey
 import io.github.arenoros.anime365.feature.account.navigation.SettingsKey
@@ -105,50 +115,81 @@ internal fun Anime365App(
     val playerEntries = rememberEntries(player.stack, "Player", decorators, player, hiddenSeriesIds)
     val sceneStrategies = remember { listOf(BottomSheetSceneStrategy<NavKey>(), SinglePaneSceneStrategy()) }
 
-    // «Назад» с корня любого таба, кроме Главной, ведёт на Главную, а не закрывает приложение.
-    BackHandler(enabled = !player.expanded && current != TopLevelDestination.Home && backStack.size == 1) {
-        current = TopLevelDestination.Home
-    }
-
     Box(modifier) {
         // Под развёрнутым Плеером приложение остаётся на месте: свайп вниз сворачивает Плеер и
-        // открывает его. Пока Плеер развёрнут, TalkBack не видит того, что под ним.
+        // открывает его.
         CompositionLocalProvider(LocalTvContentCovered provides player.expanded) {
-            Scaffold(
-                modifier = if (player.expanded) Modifier.clearAndSetSemantics {} else Modifier,
-                bottomBar = {
-                    if (!rememberIsInPictureInPicture()) {
-                        AppNavigationBar(
-                            current = current,
-                            newEpisodeCount = newEpisodeCount,
-                            onSelect = { destination ->
-                                // Повторное нажатие на активный таб возвращает к его корню.
-                                if (destination == current) {
-                                    while (backStack.size > 1) backStack.removeLastOrNull()
-                                } else {
-                                    current = destination
-                                }
-                            },
-                        )
-                    }
-                },
-                // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
-                contentWindowInsets = WindowInsets(0),
+            TabsScaffold(
+                current = current,
+                backStack = backStack,
+                newEpisodeCount = newEpisodeCount,
+                covered = player.expanded,
+                onSelect = { current = it },
             ) { padding ->
-                Box {
-                    NavDisplay(
-                        entries = entries.getValue(current),
-                        modifier = Modifier.padding(padding).consumeWindowInsets(padding),
-                        sceneStrategies = sceneStrategies,
-                        onBack = { backStack.removeLastOrNull() },
-                    )
-                    PlayerWindow(player, viewModel.videoPlayer, hiddenSeriesIds, Modifier.padding(padding))
-                }
+                NavDisplay(
+                    entries = entries.getValue(current),
+                    modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+                    sceneStrategies = sceneStrategies,
+                    onBack = { backStack.removeLastOrNull() },
+                )
+                PlayerWindow(player, viewModel.videoPlayer, hiddenSeriesIds, Modifier.padding(padding))
             }
         }
         PlayerLayer(player, playerEntries, sceneStrategies)
     }
 }
+
+/**
+ * Экран таба [current] и сами табы: внизу, а на телевизоре — колонкой слева, иначе до них пультом
+ * пришлось бы листать весь экран. В «картинке в картинке» табов нет. [covered] — приложение под
+ * развёрнутым Плеером.
+ */
+@Composable
+private fun TabsScaffold(
+    current: TopLevelDestination,
+    backStack: MutableList<NavKey>,
+    newEpisodeCount: Int,
+    covered: Boolean,
+    onSelect: (TopLevelDestination) -> Unit,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    val shown = !rememberIsInPictureInPicture()
+    val atStart = isTelevision()
+    val focus = remember { TabsFocus() }
+    val select: (TopLevelDestination) -> Unit = { destination ->
+        // Повторное нажатие на активный таб возвращает к его корню.
+        if (destination == current) {
+            while (backStack.size > 1) backStack.removeLastOrNull()
+        } else {
+            onSelect(destination)
+        }
+    }
+    // «Назад» с корня таба на телевизоре сначала переводит фокус на табы. Дальше — с любого таба,
+    // кроме Главной, на Главную, а не закрывает приложение.
+    val backToTabs = shown && atStart && !focus.hasFocus
+    val backToHome = current != TopLevelDestination.Home
+    BackHandler(enabled = !covered && backStack.size == 1 && (backToTabs || backToHome)) {
+        if (backToTabs) focus.focus(current) else onSelect(TopLevelDestination.Home)
+    }
+    Scaffold(
+        modifier = Modifier.coveredByPlayer(covered),
+        bottomBar = { if (shown && !atStart) AppNavigationBar(current, newEpisodeCount, select) },
+        // Верхний отступ у каждого экрана свой: зелёная шапка заходит под статус-бар.
+        contentWindowInsets = WindowInsets(0),
+    ) { padding ->
+        Row {
+            if (shown && atStart) AppNavigationRail(current, newEpisodeCount, focus, select)
+            Box(Modifier.weight(1f)) { content(padding) }
+        }
+    }
+}
+
+/** Пока Плеер развёрнут, TalkBack не видит того, что под ним, и пульт не уводит туда фокус. */
+private fun Modifier.coveredByPlayer(covered: Boolean): Modifier =
+    this
+        .then(if (covered) Modifier.clearAndSetSemantics {} else Modifier)
+        .focusProperties { onEnter = { if (covered) cancelFocusChange() } }
+        .focusGroup()
 
 @Composable
 private fun rememberNavDecorators(): List<NavEntryDecorator<NavKey>> =
@@ -321,6 +362,53 @@ private fun AppNavigationBar(
                 badgeDescription = pluralStringResource(R.plurals.new_episodes_badge, newEpisodeCount, newEpisodeCount),
             )
         }
+    }
+}
+
+/** Табы на телевизоре: влево от края любого экрана, и фокус встаёт на открытый таб, а не на ближайший. */
+@Composable
+private fun AppNavigationRail(
+    current: TopLevelDestination,
+    newEpisodeCount: Int,
+    focus: TabsFocus,
+    onSelect: (TopLevelDestination) -> Unit,
+) {
+    // «Назад» переключил на Главную, пока фокус на табах: фокус переходит вместе с выбором.
+    LaunchedEffect(current) {
+        if (focus.hasFocus) focus.focus(current)
+    }
+    KadrNavigationRail(
+        Modifier
+            .onFocusChanged { focus.hasFocus = it.hasFocus }
+            .focusProperties { onEnter = { focus.focus(current) } }
+            .focusGroup(),
+    ) {
+        TopLevelDestination.entries.forEach { destination ->
+            val selected = destination == current
+            KadrNavigationRailItem(
+                selected = selected,
+                onClick = { onSelect(destination) },
+                icon = if (selected) destination.selectedIcon else destination.unselectedIcon,
+                label = stringResource(destination.label),
+                modifier = Modifier.focusRequester(focus.requester(destination)),
+                badge = if (destination == TopLevelDestination.Library) newEpisodeCount else 0,
+                badgeDescription = pluralStringResource(R.plurals.new_episodes_badge, newEpisodeCount, newEpisodeCount),
+            )
+        }
+    }
+}
+
+/** Фокус пульта на табах слева. */
+@Stable
+private class TabsFocus {
+    private val requesters = TopLevelDestination.entries.associateWith { FocusRequester() }
+
+    var hasFocus by mutableStateOf(false)
+
+    fun requester(destination: TopLevelDestination): FocusRequester = requesters.getValue(destination)
+
+    fun focus(destination: TopLevelDestination) {
+        requester(destination).requestFocus()
     }
 }
 

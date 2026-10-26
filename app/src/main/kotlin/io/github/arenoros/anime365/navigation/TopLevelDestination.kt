@@ -10,7 +10,7 @@ import io.github.arenoros.anime365.feature.catalog.navigation.CatalogKey
 import io.github.arenoros.anime365.feature.catalog.navigation.HomeKey
 import io.github.arenoros.anime365.feature.library.navigation.LibraryKey
 
-/** Табы нижней навигации (docs/screens.md, «Навигация»). У каждого — свой стек экранов. */
+/** Табы навигации (docs/screens.md, «Навигация»). У каждого — свой стек экранов. */
 internal enum class TopLevelDestination(
     val key: NavKey,
     @StringRes val label: Int,
