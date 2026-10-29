@@ -30,12 +30,13 @@ internal class AppViewModel
     constructor(
         library: LibraryRepository,
         private val rememberedTranslation: RememberedTranslation,
-        downloads: EpisodeDownloads,
+        private val downloads: EpisodeDownloads,
         val videoPlayer: VideoPlayer,
         visibility: ContentVisibility,
         settings: SettingsStore,
     ) : ViewModel() {
-        init {
+        /** Запускаем сервис только после onResume Activity, когда приложение уже на экране. */
+        fun resumeDownloads() {
             downloads.resume()
         }
 

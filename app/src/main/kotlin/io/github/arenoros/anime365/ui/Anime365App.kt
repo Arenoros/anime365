@@ -130,7 +130,7 @@ internal fun Anime365App(
                     entries = entries.getValue(current),
                     modifier = Modifier.padding(padding).consumeWindowInsets(padding),
                     sceneStrategies = sceneStrategies,
-                    onBack = { backStack.removeLastOrNull() },
+                    onBack = { backStack.popAboveRoot() },
                 )
                 PlayerWindow(player, viewModel.videoPlayer, hiddenSeriesIds, Modifier.padding(padding))
             }
@@ -447,7 +447,7 @@ private fun entryProvider(
     }
     val login: () -> Unit = { backStack.add(LoginKey) }
     val subscription: () -> Unit = { backStack.add(SubscriptionKey) }
-    val back: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
+    val back: () -> Unit = { backStack.popAboveRoot() }
     return entryProvider {
         catalogEntries(
             onOpenSeries = { backStack.add(SeriesKey(it)) },

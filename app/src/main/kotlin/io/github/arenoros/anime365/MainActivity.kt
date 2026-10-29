@@ -10,6 +10,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.arenoros.anime365.core.datastore.ThemeMode
@@ -37,6 +38,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val pending by link.collectAsStateWithLifecycle()
             val viewModel: AppViewModel = hiltViewModel()
+            LifecycleResumeEffect(viewModel) {
+                viewModel.resumeDownloads()
+                onPauseOrDispose { }
+            }
             // Пока Настройки читаются, кадр пуст: иначе он мигнул бы темой системы вместо выбранной.
             val themeMode = viewModel.themeMode.collectAsStateWithLifecycle().value ?: return@setContent
             val darkTheme =
